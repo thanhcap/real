@@ -732,35 +732,31 @@
   </script>
   -->
 
-  <!-- Real-time Gallery Sync using Render backend -->
   <script>
-    // Default posts (for reset and first load)
+    // Default posts (for first load)
     const defaultPosts = [
       {
         url: "carljung.html",
         img: "https://media.nxbtrithuc.com.vn/avatar/image-20220216160924694.jpg",
         alt: "Carl Jung",
         name: "Carl Jung",
-        author: "[Student Name]"
+        author: ""
       },
       {
         url: "dicaprio.html",
         img: "https://cdn.britannica.com/65/227665-050-D74A477E/American-actor-Leonardo-DiCaprio-2016.jpg",
         alt: "Leonardo DiCaprio",
         name: "Leonardo DiCaprio",
-        author: "[Student Name]"
+        author: ""
       },
       {
         url: "vangogh.html",
         img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project_%28454045%29.jpg/250px-Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project_%28454045%29.jpg",
         alt: "Vincent van Gogh",
         name: "Vincent van Gogh",
-        author: "[Student Name]"
+        author: ""
       }
     ];
-
-    // API base URL for Render backend
-    const API_BASE = "https://real-gft1.onrender.com/api/posts";
 
     // Get gallery grid
     function getGalleryGrid() {
@@ -774,12 +770,23 @@
       return el;
     }
 
-    // Render posts in the gallery
+    // Load posts from localStorage
+    function loadPosts() {
+      const stored = localStorage.getItem('posts');
+      return stored ? JSON.parse(stored) : defaultPosts;
+    }
+
+    // Save posts to localStorage
+    function savePosts(posts) {
+      localStorage.setItem('posts', JSON.stringify(posts));
+    }
+
+    // Render posts
     function renderGallery(posts) {
       const grid = getGalleryGrid();
       if (!grid) return;
       grid.innerHTML = '';
-      posts.forEach((post, idx) => {
+      posts.forEach(post => {
         const a = document.createElement('a');
         a.href = post.url || "#";
         a.className = "card";
@@ -789,19 +796,18 @@
         a.innerHTML = `
           <div style="position:relative;">
             <img src="${post.img}" alt="${post.alt || ''}">
-            <div class="img-overlay"><span>By ${post.author}</span></div>
           </div>
           <div class="body">
             <h3>${post.name}</h3>
-            <p>By ${post.author}</p>
+            <p>${post.author ? 'By ' + post.author : ''}</p>
           </div>
         `;
         grid.appendChild(a);
       });
     }
 
-    // Add post form UI
-    function createAddPostForm(onAdd, onReset) {
+    // Create add post form
+    function createAddPostForm() {
       const form = document.createElement('form');
       form.style.display = 'flex';
       form.style.flexWrap = 'wrap';
@@ -831,89 +837,32 @@
           url: fd.get('url').trim() || "#",
           alt: fd.get('name').trim()
         };
-        if (!post.name || !post.author || !post.img) return;
-        onAdd(post);
+        const posts = loadPosts();
+        posts.push(post);
+        savePosts(posts);
+        renderGallery(posts);
         form.reset();
       });
       form.querySelector('#reset-gallery').addEventListener('click', function() {
         if (window.confirm("Reset the gallery to default posts?")) {
-          onReset();
+          savePosts(defaultPosts);
+          renderGallery(defaultPosts);
         }
       });
       return form;
     }
 
-    // Fetch posts from backend
-    async function fetchPosts() {
-      try {
-        const res = await fetch(API_BASE);
-        if (!res.ok) throw new Error("Failed to fetch posts");
-        const posts = await res.json();
-        return Array.isArray(posts) ? posts : [];
-      } catch (e) {
-        // fallback to default if error
-        return defaultPosts;
-      }
-    }
-
-    // Add post to backend
-    async function addPost(post) {
-      try {
-        await fetch(API_BASE, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(post)
-        });
-        // Will trigger reload via polling
-      } catch (e) {
-        alert("Failed to add post.");
-      }
-    }
-
-    // Reset posts in backend
-    async function resetPosts() {
-      try {
-        await fetch(API_BASE + "/reset", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ posts: defaultPosts })
-        });
-      } catch (e) {
-        alert("Failed to reset gallery.");
-      }
-    }
-
-    // Setup Gallery UI and polling for real-time sync
     function setupGallery() {
       const grid = getGalleryGrid();
       if (!grid) return;
-      // Insert form above the gallery grid
+      // Insert form above the gallery
       if (!document.getElementById('add-post-form')) {
-        const form = createAddPostForm(
-          async function(post) {
-            await addPost(post);
-            // gallery will refresh via polling
-          },
-          async function() {
-            await resetPosts();
-            // gallery will refresh via polling
-          }
-        );
+        const form = createAddPostForm();
         form.id = 'add-post-form';
         grid.parentNode.insertBefore(form, grid);
       }
-      // Initial render and polling for changes
-      let lastData = "";
-      async function poll() {
-        const posts = await fetchPosts();
-        const dataStr = JSON.stringify(posts);
-        if (dataStr !== lastData) {
-          renderGallery(posts);
-          lastData = dataStr;
-        }
-      }
-      poll();
-      setInterval(poll, 4000); // Poll every 4 seconds for updates
+      // Initial render
+      renderGallery(loadPosts());
     }
 
     if (document.readyState === "loading") {
