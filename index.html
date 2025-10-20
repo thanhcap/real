@@ -732,22 +732,8 @@
   </script>
   -->
 
-  <!-- Firebase modular SDK for Blog Gallery real-time sync -->
-  <script type="module">
-    // Firebase v9+ modular SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-    // TODO: Replace with your Firebase project config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
+  <!-- Real-time Gallery Sync using Render backend -->
+  <script>
     // Default posts (for reset and first load)
     const defaultPosts = [
       {
@@ -772,6 +758,9 @@
         author: "[Student Name]"
       }
     ];
+
+    // API base URL for Render backend
+    const API_BASE = "https://your-render-app.onrender.com/api/posts";
 
     // Get gallery grid
     function getGalleryGrid() {
@@ -854,30 +843,47 @@
       return form;
     }
 
-    // Firebase logic
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const postsRef = collection(db, "blogGalleryPosts");
-
-    // Add post to Firestore
-    async function addPostToFirestore(post) {
-      await addDoc(postsRef, post);
+    // Fetch posts from backend
+    async function fetchPosts() {
+      try {
+        const res = await fetch(API_BASE);
+        if (!res.ok) throw new Error("Failed to fetch posts");
+        const posts = await res.json();
+        return Array.isArray(posts) ? posts : [];
+      } catch (e) {
+        // fallback to default if error
+        return defaultPosts;
+      }
     }
 
-    // Reset posts in Firestore (delete all, add defaults)
-    async function resetGalleryInFirestore() {
-      // Delete all docs
-      const snapshot = await getDocs(postsRef);
-      const deletions = [];
-      snapshot.forEach(docSnap => {
-        deletions.push(deleteDoc(doc(db, "blogGalleryPosts", docSnap.id)));
-      });
-      await Promise.all(deletions);
-      // Add default posts
-      await Promise.all(defaultPosts.map(post => addDoc(postsRef, post)));
+    // Add post to backend
+    async function addPost(post) {
+      try {
+        await fetch(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(post)
+        });
+        // Will trigger reload via polling
+      } catch (e) {
+        alert("Failed to add post.");
+      }
     }
 
-    // Setup Gallery UI and Firestore sync
+    // Reset posts in backend
+    async function resetPosts() {
+      try {
+        await fetch(API_BASE + "/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ posts: defaultPosts })
+        });
+      } catch (e) {
+        alert("Failed to reset gallery.");
+      }
+    }
+
+    // Setup Gallery UI and polling for real-time sync
     function setupGallery() {
       const grid = getGalleryGrid();
       if (!grid) return;
@@ -885,24 +891,29 @@
       if (!document.getElementById('add-post-form')) {
         const form = createAddPostForm(
           async function(post) {
-            await addPostToFirestore(post);
+            await addPost(post);
+            // gallery will refresh via polling
           },
           async function() {
-            await resetGalleryInFirestore();
+            await resetPosts();
+            // gallery will refresh via polling
           }
         );
         form.id = 'add-post-form';
         grid.parentNode.insertBefore(form, grid);
       }
-      // Real-time sync
-      onSnapshot(postsRef, (snapshot) => {
-        const posts = [];
-        snapshot.forEach(docSnap => {
-          posts.push(docSnap.data());
-        });
-        // Sort by name for display (optional)
-        renderGallery(posts);
-      });
+      // Initial render and polling for changes
+      let lastData = "";
+      async function poll() {
+        const posts = await fetchPosts();
+        const dataStr = JSON.stringify(posts);
+        if (dataStr !== lastData) {
+          renderGallery(posts);
+          lastData = dataStr;
+        }
+      }
+      poll();
+      setInterval(poll, 4000); // Poll every 4 seconds for updates
     }
 
     if (document.readyState === "loading") {
