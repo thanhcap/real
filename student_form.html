@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Submit Your Blog Post | Voices of Success</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #182642;
+      --gold: #D1A24A;
+      --light: #F9FAFB;
+      --gray: #6D758D;
+      --border: #E3E6EA;
+      --radius: 16px;
+      --shadow: 0 2px 16px 0 rgba(24,38,66,0.08);
+    }
+    /* General Styles */
+    body {
+      font-family: 'Roboto', sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: var(--navy);
+    }
+
+    .container {
+      width: 90%;
+      margin: 30px auto 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    /* Header */
+    header {
+      background: #182642;
+      color: #fff;
+      padding: 20px 7%;
+      text-align: center;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      margin-top: 10px;
+    }
+
+    /* Card Styles */
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+
+    .card textarea {
+      width: 100%;
+      height: 300px;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      margin-bottom: 15px;
+      flex-shrink: 0;
+    }
+
+    .card input[type="file"] {
+      margin-top: 10px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .card img {
+      width: 100%;
+      margin-top: 15px;
+      border-radius: 8px;
+      flex-grow: 1;
+      object-fit: contain;
+      max-height: 200px;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      font-size: 0.95rem;
+      margin-top: 20px;
+      padding: 20px 0;
+      background: white;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Mini Padlet Styles */
+    #mini-padlet {
+      width: 90%;
+      max-width: 850px;
+      margin: 20px auto 40px;
+      background: white;
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    #mini-padlet h2 {
+      margin-top: 0;
+      color: var(--navy);
+    }
+
+    #padlet-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #padlet-form input[type="text"],
+    #padlet-form textarea {
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    #padlet-form textarea {
+      height: 100px;
+    }
+
+    #padlet-form input[type="file"] {
+      margin-top: 5px;
+    }
+
+    #padlet-form button {
+      align-self: flex-start;
+      background: var(--gold);
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    #padlet-form button:hover {
+      background: #b2872f;
+    }
+
+    #notes-container {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .note-card {
+      background: white;
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      max-height: 600px;
+      position: relative;
+    }
+
+    .note-card img {
+      width: 100%;
+      margin-top: 15px;
+      border-radius: 8px;
+      object-fit: contain;
+      max-height: 200px;
+      display: block;
+    }
+
+    .note-card button.delete-note {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #e74c3c;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .note-card button.delete-note:hover {
+      background: #c0392b;
+    }
+
+    .note-card p {
+      margin: 5px 0;
+      word-wrap: break-word;
+    }
+
+    .note-card .note-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--navy);
+    }
+
+    .note-card .note-famous {
+      font-style: italic;
+      color: var(--gray);
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    .note-card .note-content {
+      flex-grow: 1;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      color: var(--navy);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Voices of Success – Student Submission</h1>
+  </header>
+
+  <div style="max-width:850px; margin:20px auto 0; padding:0 50px; text-align:left;">
+    <button onclick="window.location.href='tests11.html'" 
+      style="
+        background:#eee;
+        color:#182642;
+        border:1px solid #ccc;
+        padding:8px 18px;
+        border-radius:6px;
+        cursor:pointer;
+        font-size:0.95rem;
+        transition:background 0.2s;
+      "
+      onmouseover="this.style.background='#ddd'"
+      onmouseout="this.style.background='#eee'">
+      ← Back to Home
+    </button>
+  </div>
+
+  <section id="mini-padlet">
+    <h2>Mini Padlet</h2>
+    <form id="padlet-form">
+      <input type="text" id="student-name" placeholder="Your Name" required>
+      <input type="text" id="famous-name" placeholder="Famous Person's Name" required>
+      <textarea id="padlet-blog-content" placeholder="Enter blog content..." required></textarea>
+      <input type="file" id="padlet-image" accept="image/*">
+      <button type="submit">Add Note</button>
+    </form>
+    <div id="notes-container">
+      <!-- Notes will appear here -->
+    </div>
+  </section>
+
+  <footer>
+    © 2025 Voices of Success Project | All Rights Reserved
+  </footer>
+
+<script>
+// Mini Padlet functionality
+const padletForm = document.getElementById('padlet-form');
+const notesContainer = document.getElementById('notes-container');
+const studentNameInput = document.getElementById('student-name');
+const famousNameInput = document.getElementById('famous-name');
+const blogContentInput = document.getElementById('padlet-blog-content');
+const imageInput = document.getElementById('padlet-image');
+
+function getNotes() {
+  const notesJSON = localStorage.getItem('miniPadletNotes');
+  return notesJSON ? JSON.parse(notesJSON) : [];
+}
+
+function saveNotes(notes) {
+  localStorage.setItem('miniPadletNotes', JSON.stringify(notes));
+}
+
+function createNoteCard(note, index) {
+  const card = document.createElement('div');
+  card.className = 'note-card';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-note';
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.addEventListener('click', () => {
+    let notes = getNotes();
+    notes.splice(index, 1);
+    saveNotes(notes);
+    renderNotes();
+  });
+  card.appendChild(deleteBtn);
+
+  const nameP = document.createElement('p');
+  nameP.className = 'note-name';
+  nameP.textContent = note.studentName;
+  card.appendChild(nameP);
+
+  const famousP = document.createElement('p');
+  famousP.className = 'note-famous';
+  famousP.textContent = note.famousName;
+  card.appendChild(famousP);
+
+  const contentP = document.createElement('p');
+  contentP.className = 'note-content';
+  contentP.textContent = note.blogContent;
+  card.appendChild(contentP);
+
+  if(note.imageData) {
+    const img = document.createElement('img');
+    img.src = note.imageData;
+    img.alt = `Image for ${note.studentName}'s note`;
+    card.appendChild(img);
+  }
+
+  return card;
+}
+
+function renderNotes() {
+  notesContainer.innerHTML = '';
+  const notes = getNotes();
+  notes.forEach((note, index) => {
+    const card = createNoteCard(note, index);
+    notesContainer.appendChild(card);
+  });
+}
+
+padletForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const studentName = studentNameInput.value.trim();
+  const famousName = famousNameInput.value.trim();
+  const blogContent = blogContentInput.value.trim();
+
+  if(!studentName || !famousName || !blogContent) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+
+  const file = imageInput.files[0];
+
+  if(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      addNote(studentName, famousName, blogContent, event.target.result);
+    }
+    reader.readAsDataURL(file);
+  } else {
+    addNote(studentName, famousName, blogContent, null);
+  }
+});
+
+function addNote(studentName, famousName, blogContent, imageData) {
+  const notes = getNotes();
+  notes.push({ studentName, famousName, blogContent, imageData });
+  saveNotes(notes);
+  renderNotes();
+  padletForm.reset();
+}
+
+// Render notes on page load
+renderNotes();
+</script>
+
+<script>
+// If you want to extend this form to handle multiple placeholders (like 27 cards) in a single page,
+// we can iterate over card indexes. Currently, one placeholder per page is used with ?card=ID in URL.
+// This script ensures each card's blog content and image are saved separately using studentId and cardIndex.
+// Already handled: localStorage keys are `blog-text-{studentId}-{cardIndex}` and `blog-image-{studentId}-{cardIndex}`.
+// No further changes needed unless you plan to add multiple placeholders in this page.
+</script>
+</body>
+</html>
