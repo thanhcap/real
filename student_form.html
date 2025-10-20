@@ -277,8 +277,28 @@
     © 2025 Voices of Success Project | All Rights Reserved
   </footer>
 
-<script>
-// Mini Padlet functionality
+<script type="module">
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  // TODO: Replace with your Firebase project's config
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
 const padletForm = document.getElementById('padlet-form');
 const notesContainer = document.getElementById('notes-container');
 const studentNameInput = document.getElementById('student-name');
@@ -286,27 +306,19 @@ const famousNameInput = document.getElementById('famous-name');
 const blogContentInput = document.getElementById('padlet-blog-content');
 const imageInput = document.getElementById('padlet-image');
 
-function getNotes() {
-  const notesJSON = localStorage.getItem('miniPadletNotes');
-  return notesJSON ? JSON.parse(notesJSON) : [];
-}
-
-function saveNotes(notes) {
-  localStorage.setItem('miniPadletNotes', JSON.stringify(notes));
-}
-
-function createNoteCard(note, index) {
+function createNoteCard(note, id) {
   const card = document.createElement('div');
   card.className = 'note-card';
 
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'delete-note';
   deleteBtn.textContent = 'Delete';
-  deleteBtn.addEventListener('click', () => {
-    let notes = getNotes();
-    notes.splice(index, 1);
-    saveNotes(notes);
-    renderNotes();
+  deleteBtn.addEventListener('click', async () => {
+    try {
+      await deleteDoc(doc(db, "miniPadletNotes", id));
+    } catch (error) {
+      console.error("Error deleting note: ", error);
+    }
   });
   card.appendChild(deleteBtn);
 
@@ -325,9 +337,9 @@ function createNoteCard(note, index) {
   contentP.textContent = note.blogContent;
   card.appendChild(contentP);
 
-  if(note.imageData) {
+  if(note.imageUrl) {
     const img = document.createElement('img');
-    img.src = note.imageData;
+    img.src = note.imageUrl;
     img.alt = `Image for ${note.studentName}'s note`;
     card.appendChild(img);
   }
@@ -335,16 +347,16 @@ function createNoteCard(note, index) {
   return card;
 }
 
-function renderNotes() {
+function renderNotes(snapshot) {
   notesContainer.innerHTML = '';
-  const notes = getNotes();
-  notes.forEach((note, index) => {
-    const card = createNoteCard(note, index);
+  snapshot.forEach(docSnap => {
+    const note = docSnap.data();
+    const card = createNoteCard(note, docSnap.id);
     notesContainer.appendChild(card);
   });
 }
 
-padletForm.addEventListener('submit', function(e) {
+padletForm.addEventListener('submit', async function(e) {
   e.preventDefault();
 
   const studentName = studentNameInput.value.trim();
@@ -358,27 +370,40 @@ padletForm.addEventListener('submit', function(e) {
 
   const file = imageInput.files[0];
 
+  let imageUrl = null;
+
   if(file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      addNote(studentName, famousName, blogContent, event.target.result);
+    try {
+      const storageRef = ref(storage, `miniPadletImages/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      imageUrl = await getDownloadURL(storageRef);
+    } catch (error) {
+      console.error("Error uploading image: ", error);
+      alert("Failed to upload image. Please try again.");
+      return;
     }
-    reader.readAsDataURL(file);
-  } else {
-    addNote(studentName, famousName, blogContent, null);
+  }
+
+  try {
+    await addDoc(collection(db, "miniPadletNotes"), {
+      studentName,
+      famousName,
+      blogContent,
+      imageUrl,
+      createdAt: Date.now()
+    });
+    padletForm.reset();
+  } catch (error) {
+    console.error("Error adding note: ", error);
+    alert("Failed to add note. Please try again.");
   }
 });
 
-function addNote(studentName, famousName, blogContent, imageData) {
-  const notes = getNotes();
-  notes.push({ studentName, famousName, blogContent, imageData });
-  saveNotes(notes);
-  renderNotes();
-  padletForm.reset();
-}
-
-// Render notes on page load
-renderNotes();
+// Real-time listener
+const q = query(collection(db, "miniPadletNotes"), orderBy("createdAt", "desc"));
+onSnapshot(q, (snapshot) => {
+  renderNotes(snapshot);
+});
 </script>
 
 <script>
