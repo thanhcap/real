@@ -277,28 +277,8 @@
     © 2025 Voices of Success Project | All Rights Reserved
   </footer>
 
-<script type="module">
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  // TODO: Replace with your Firebase project's config
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
+<script>
+// === Render API Integration for Mini Padlet ===
 const padletForm = document.getElementById('padlet-form');
 const notesContainer = document.getElementById('notes-container');
 const studentNameInput = document.getElementById('student-name');
@@ -306,7 +286,10 @@ const famousNameInput = document.getElementById('famous-name');
 const blogContentInput = document.getElementById('padlet-blog-content');
 const imageInput = document.getElementById('padlet-image');
 
-function createNoteCard(note, id) {
+// Change this to your deployed Render backend URL
+const API_BASE = 'https://YOUR-RENDER-BACKEND.onrender.com/api/posts';
+
+function createNoteCard(note) {
   const card = document.createElement('div');
   card.className = 'note-card';
 
@@ -314,10 +297,16 @@ function createNoteCard(note, id) {
   deleteBtn.className = 'delete-note';
   deleteBtn.textContent = 'Delete';
   deleteBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to delete this note?')) return;
     try {
-      await deleteDoc(doc(db, "miniPadletNotes", id));
+      await fetch(`${API_BASE}/${encodeURIComponent(note._id)}`, {
+        method: 'DELETE'
+      });
+      // Refresh after deletion
+      fetchAndRenderNotes();
     } catch (error) {
       console.error("Error deleting note: ", error);
+      alert("Failed to delete note. Please try again.");
     }
   });
   card.appendChild(deleteBtn);
@@ -337,73 +326,76 @@ function createNoteCard(note, id) {
   contentP.textContent = note.blogContent;
   card.appendChild(contentP);
 
-  if(note.imageUrl) {
+  if (note.imageUrl) {
     const img = document.createElement('img');
     img.src = note.imageUrl;
     img.alt = `Image for ${note.studentName}'s note`;
     card.appendChild(img);
   }
-
   return card;
 }
 
-function renderNotes(snapshot) {
+function renderNotes(notes) {
   notesContainer.innerHTML = '';
-  snapshot.forEach(docSnap => {
-    const note = docSnap.data();
-    const card = createNoteCard(note, docSnap.id);
+  notes.forEach(note => {
+    const card = createNoteCard(note);
     notesContainer.appendChild(card);
   });
 }
 
+async function fetchAndRenderNotes() {
+  try {
+    const res = await fetch(API_BASE, { cache: "no-store" });
+    if (!res.ok) throw new Error('Failed to fetch notes');
+    const notes = await res.json();
+    // Sort by createdAt descending if not already sorted
+    notes.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    renderNotes(notes);
+  } catch (err) {
+    notesContainer.innerHTML = '<p style="color:red;">Failed to load notes.</p>';
+  }
+}
+
 padletForm.addEventListener('submit', async function(e) {
   e.preventDefault();
-
   const studentName = studentNameInput.value.trim();
   const famousName = famousNameInput.value.trim();
   const blogContent = blogContentInput.value.trim();
-
-  if(!studentName || !famousName || !blogContent) {
+  if (!studentName || !famousName || !blogContent) {
     alert('Please fill in all required fields.');
     return;
   }
-
   const file = imageInput.files[0];
-
-  let imageUrl = null;
-
-  if(file) {
-    try {
-      const storageRef = ref(storage, `miniPadletImages/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      imageUrl = await getDownloadURL(storageRef);
-    } catch (error) {
-      console.error("Error uploading image: ", error);
-      alert("Failed to upload image. Please try again.");
-      return;
-    }
+  const formData = new FormData();
+  formData.append('studentName', studentName);
+  formData.append('famousName', famousName);
+  formData.append('blogContent', blogContent);
+  if (file) {
+    formData.append('image', file);
   }
-
   try {
-    await addDoc(collection(db, "miniPadletNotes"), {
-      studentName,
-      famousName,
-      blogContent,
-      imageUrl,
-      createdAt: Date.now()
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      body: formData
     });
+    if (!res.ok) throw new Error('Failed to add note');
     padletForm.reset();
-  } catch (error) {
-    console.error("Error adding note: ", error);
+    // Refresh notes after submit
+    fetchAndRenderNotes();
+  } catch (err) {
     alert("Failed to add note. Please try again.");
   }
 });
 
-// Real-time listener
-const q = query(collection(db, "miniPadletNotes"), orderBy("createdAt", "desc"));
-onSnapshot(q, (snapshot) => {
-  renderNotes(snapshot);
-});
+// Polling for real-time sync
+let notesPollInterval = null;
+function startNotesPolling() {
+  fetchAndRenderNotes();
+  if (notesPollInterval) clearInterval(notesPollInterval);
+  notesPollInterval = setInterval(fetchAndRenderNotes, 5000); // every 5 seconds
+}
+// Start polling on load
+startNotesPolling();
 </script>
 
 <script>
